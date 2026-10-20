@@ -1,0 +1,1 @@
+export default function Placeholder(){return <div className="container page-container"><h1>Feature module</h1><p>This page is reserved in the project structure. Connect it to the documented API before using it in production.</p></div>}
