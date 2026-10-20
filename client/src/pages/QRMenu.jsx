@@ -1,7 +1,43 @@
-
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from '../services/api';
-export default function QRMenu(){const {token}=useParams();const [info,setInfo]=useState(null);const [error,setError]=useState('');
-useEffect(()=>{api.get(`/tables/qr/${token}`).then(r=>setInfo(r.data)).catch(e=>setError(e.response?.data?.message||'This QR code is invalid or disabled'));},[token]);
-return <div className="container page-container">{error?<div className="empty-state"><h2>QR code unavailable</h2><p>{error}</p></div>:!info?<div className="screen-center">Validating table QR…</div>:<div className="checkout-card"><div className="eyebrow dark">WELCOME TO</div><h1>{info.restaurant.name}</h1><p>Table {info.table.tableNumber}</p><p>Table verified. To place a dine-in order, add items from the menu and submit this table token with the order. The standard cart UI currently supports delivery checkout; the dine-in token checkout is an integration step.</p><button className="btn btn-gold" onClick={()=>{sessionStorage.setItem('rms_table_token',token);sessionStorage.setItem('rms_restaurant_id',info.restaurant._id);window.location.href=`/?restaurantId=${info.restaurant._id}`;}}>Browse menu</button></div>}</div>}
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { menuService } from '../services/menuService.js';
+import { useCart } from '../context/CartContext.jsx';
+import MenuCategory from '../components/menu/MenuCategory.jsx';
+import Loader from '../components/common/Loader.jsx';
+
+export default function QRMenu() {
+  const { token } = useParams();
+  const nav = useNavigate();
+  const { setContext, setOrderType, itemCount } = useCart();
+  const [state, setState] = useState({ loading: true, error: null, table: null, menu: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const table = await menuService.resolveTable(token);
+        const menu = await menuService.publicMenu(table.restaurant.id);
+        if (cancelled) return;
+        setContext({ restaurantId: table.restaurant.id, tableId: table.tableId, tableNumber: table.tableNumber });
+        setOrderType('DINE_IN');
+        setState({ loading: false, error: null, table, menu });
+      } catch (err) {
+        if (!cancelled) setState({ loading: false, error: err.message, table: null, menu: null });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token, setContext, setOrderType]);
+
+  if (state.loading) return <Loader label="Loading menu…" />;
+  if (state.error) return <div className="mx-auto max-w-md rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800">{state.error} · <Link to="/" className="underline">home</Link></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><h1 className="text-2xl font-bold">{state.table.restaurant.name}</h1><p className="text-sm text-slate-500">Table {state.table.tableNumber} · Dine-in</p></div>
+        <button className="btn-success" onClick={() => nav('/cart')} disabled={itemCount === 0}>Cart ({itemCount})</button>
+      </div>
+      <MenuCategory menu={state.menu} />
+    </div>
+  );
+}

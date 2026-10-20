@@ -1,3 +1,3 @@
-import { useEffect, useState } from 'react';
-import api from '../services/api';
-export function useNotifications(){const [notifications,setNotifications]=useState([]);useEffect(()=>{api.get('/notifications').then(r=>setNotifications(r.data.notifications)).catch(()=>{});},[]);return notifications;}
+import { useContext } from 'react';
+import { NotificationContext } from '../context/NotificationContext.jsx';
+export function useNotifications() { return useContext(NotificationContext); }

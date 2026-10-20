@@ -1,28 +1,117 @@
+import { MenuCategory } from '../models/MenuCategory.js';
+import { MenuItem } from '../models/MenuItem.js';
+import { ok, fail } from '../utils/apiResponse.js';
+import { AuditLog } from '../models/AuditLog.js';
 
-import MenuItem from '../models/MenuItem.js';
-import Restaurant from '../models/Restaurant.js';
-import { httpError } from '../utils/apiResponse.js';
-export async function listMenu(req, res) {
-  const filter = { restaurantId: req.query.restaurantId, available: true };
-  if (!filter.restaurantId) return res.status(400).json({ message: 'restaurantId is required' });
-  res.json({ items: await MenuItem.find(filter).sort({ name: 1 }).lean() });
+// ---- Categories ----
+export async function listCategories(req, res, next) {
+  try {
+    const items = await MenuCategory.find({ restaurant: req.restaurantId, isActive: true }).sort({
+      sortOrder: 1,
+      name: 1,
+    });
+    return ok(res, items);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function createMenu(req, res) {
-  const restaurant = await Restaurant.findOne({ _id: req.body.restaurantId, owner: req.user._id });
-  if (!restaurant && req.user.role !== 'admin') throw httpError(403, 'Restaurant access denied');
-  const item = await MenuItem.create({ ...req.body, restaurantId: req.body.restaurantId });
-  res.status(201).json({ item });
+
+export async function createCategory(req, res, next) {
+  try {
+    const cat = await MenuCategory.create({ ...req.body, restaurant: req.restaurantId });
+    await AuditLog.create({
+      restaurant: req.restaurantId,
+      user: req.user._id,
+      action: 'CATEGORY_CREATE',
+      targetType: 'MenuCategory',
+      targetId: String(cat._id),
+    });
+    return ok(res, cat, 'Created', 201);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function updateMenu(req, res) {
-  const item = await MenuItem.findById(req.params.id);
-  if (!item) throw httpError(404, 'Menu item not found');
-  if (req.user.role !== 'admin' && (!req.user.restaurantId || item.restaurantId.toString() !== req.user.restaurantId.toString())) throw httpError(403, 'Restaurant access denied');
-  Object.assign(item, req.body, { restaurantId: item.restaurantId });
-  await item.save(); res.json({ item });
+
+export async function updateCategory(req, res, next) {
+  try {
+    const cat = await MenuCategory.findOneAndUpdate(
+      { _id: req.params.id, restaurant: req.restaurantId },
+      req.body,
+      { new: true }
+    );
+    if (!cat) return fail(res, 'Category not found', 404);
+    return ok(res, cat);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function deleteMenu(req, res) {
-  const item = await MenuItem.findById(req.params.id);
-  if (!item) throw httpError(404, 'Menu item not found');
-  if (req.user.role !== 'admin' && item.restaurantId.toString() !== req.user.restaurantId?.toString()) throw httpError(403, 'Restaurant access denied');
-  await item.deleteOne(); res.json({ message: 'Menu item deleted' });
+
+export async function deleteCategory(req, res, next) {
+  try {
+    const cat = await MenuCategory.findOneAndUpdate(
+      { _id: req.params.id, restaurant: req.restaurantId },
+      { isActive: false },
+      { new: true }
+    );
+    if (!cat) return fail(res, 'Category not found', 404);
+    return ok(res, null, 'Deleted');
+  } catch (e) {
+    next(e);
+  }
+}
+
+// ---- Menu items ----
+export async function listMenu(req, res, next) {
+  try {
+    const filter = { restaurant: req.restaurantId, isAvailable: true };
+    if (req.query.category) filter.category = req.query.category;
+    const items = await MenuItem.find(filter).sort({ name: 1 });
+    return ok(res, items);
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function createItem(req, res, next) {
+  try {
+    const item = await MenuItem.create({ ...req.body, restaurant: req.restaurantId });
+    await AuditLog.create({
+      restaurant: req.restaurantId,
+      user: req.user._id,
+      action: 'MENU_ITEM_CREATE',
+      targetType: 'MenuItem',
+      targetId: String(item._id),
+    });
+    return ok(res, item, 'Created', 201);
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function updateItem(req, res, next) {
+  try {
+    const item = await MenuItem.findOneAndUpdate(
+      { _id: req.params.id, restaurant: req.restaurantId },
+      req.body,
+      { new: true }
+    );
+    if (!item) return fail(res, 'Item not found', 404);
+    return ok(res, item);
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function deleteItem(req, res, next) {
+  try {
+    const item = await MenuItem.findOneAndUpdate(
+      { _id: req.params.id, restaurant: req.restaurantId },
+      { isAvailable: false },
+      { new: true }
+    );
+    if (!item) return fail(res, 'Item not found', 404);
+    return ok(res, null, 'Removed');
+  } catch (e) {
+    next(e);
+  }
 }

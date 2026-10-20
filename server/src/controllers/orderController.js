@@ -1,43 +1,177 @@
+import * as orderService from "../services/orderService.js";
+import { ok, fail } from "../utils/apiResponse.js";
+import { Order } from "../models/Order.js";
+import { dispatchNotification } from "../services/notificationService.js";
 
-import Order from '../models/Order.js';
-import Restaurant from '../models/Restaurant.js';
-import { createOrder, transitionOrder } from '../services/orderService.js';
-import { httpError } from '../utils/apiResponse.js';
-import { createNotification } from '../services/notificationService.js';
-export async function placeOrder(req, res) {
-  const order = await createOrder(req.body, req.user);
-  res.status(201).json({ order, message: 'Order created. Complete payment before the kitchen begins.' });
+export async function createOrder(req, res, next) {
+  try {
+    const {
+      restaurantId,
+      tableId,
+      orderType,
+      customerName,
+      customerPhone,
+      deliveryAddress,
+      deliveryLocation,
+      items,
+      specialInstructions,
+    } = req.body;
+
+    const order = await orderService.createOrder({
+      restaurantId,
+      tableId,
+      orderType,
+      customerName,
+      customerPhone,
+      deliveryAddress,
+      deliveryLocation,
+      items,
+      specialInstructions,
+      user: req.user || null,
+    });
+    return ok(res, order, "Created", 201);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function myOrders(req, res) {
-  res.json({ orders: await Order.find({ customerId: req.user._id }).sort({ createdAt: -1 }).limit(100).lean() });
+
+export async function getOrder(req, res, next) {
+  try {
+    const filter = {};
+    if (req.user.role !== "admin") {
+      if (!["manager", "waiter", "cook"].includes(req.user.role)) {
+        filter.customer = req.user._id;
+      }
+    }
+    const order = await orderService.getOrderById(req.params.id, filter);
+    return ok(res, order);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function listOrders(req, res) {
-  const restaurantId = req.user.role === 'admin' ? req.query.restaurantId : req.user.restaurantId?.toString();
-  if (!restaurantId) throw httpError(400, 'Restaurant scope is required');
-  res.json({ orders: await Order.find({ restaurantId }).sort({ createdAt: -1 }).limit(200).lean() });
+
+export async function listKitchenOrders(req, res, next) {
+  try {
+    const statuses = ["PAID", "CONFIRMED", "PREPARING", "READY"];
+    const orders = await Order.find({
+      restaurant: req.restaurantId,
+      status: { $in: statuses },
+    })
+      .sort({ createdAt: 1 })
+      .limit(200)
+      .lean();
+    return ok(res, orders);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function getOrder(req, res) {
-  const order = await Order.findById(req.params.id);
-  if (!order) throw httpError(404, 'Order not found');
-  const staff = ['manager','admin','waiter','kitchen','delivery'].includes(req.user.role) && (req.user.role === 'admin' || order.restaurantId.toString() === req.user.restaurantId?.toString());
-  if (!staff && order.customerId?.toString() !== req.user._id.toString()) throw httpError(403, 'Order access denied');
-  res.json({ order });
+
+export async function listWaiterOrders(req, res, next) {
+  try {
+    const statuses = ["PAID", "CONFIRMED", "PREPARING", "READY", "SERVED"];
+    const orders = await Order.find({
+      restaurant: req.restaurantId,
+      status: { $in: statuses },
+    })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+    return ok(res, orders);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function updateStatus(req, res) {
-  const order = await Order.findById(req.params.id);
-  if (!order) throw httpError(404, 'Order not found');
-  if (req.user.role !== 'admin' && order.restaurantId.toString() !== req.user.restaurantId?.toString()) throw httpError(403, 'Restaurant access denied');
-  if (!['manager','admin','kitchen','waiter','delivery'].includes(req.user.role)) throw httpError(403, 'Insufficient permissions');
-  if (req.body.status === 'CANCELLED' && req.user.role !== 'manager' && req.user.role !== 'admin') throw httpError(403, 'Only a manager can cancel this order');
-  const updated = await transitionOrder(order, req.body.status, req.user);
-  res.json({ order: updated });
+
+export async function listMyOrders(req, res, next) {
+  try {
+    const orders = await Order.find({ customer: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    return ok(res, orders);
+  } catch (e) {
+    next(e);
+  }
 }
-export async function cancelOrder(req, res) {
-  const order = await Order.findById(req.params.id);
-  if (!order) throw httpError(404, 'Order not found');
-  if (order.customerId?.toString() !== req.user._id.toString()) throw httpError(403, 'Order access denied');
-  if (!['PENDING_PAYMENT','PAID'].includes(order.status)) throw httpError(400, 'This order can no longer be cancelled online');
-  order.status = 'CANCELLED'; order.statusHistory.push({ status: 'CANCELLED', by: req.user._id }); await order.save();
-  await createNotification({ restaurantId: order.restaurantId, type: 'ORDER_CANCELLED', title: 'Order cancelled', message: `${order.orderNumber} was cancelled`, orderId: order._id });
-  res.json({ order });
+
+export async function updateStatus(req, res, next) {
+  try {
+    const { status, note } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return fail(res, "Order not found", 404);
+    if (
+      req.user.role !== "admin" &&
+      String(order.restaurant) !== String(req.user.restaurant)
+    ) {
+      return fail(res, "Forbidden", 403);
+    }
+    const updated = await orderService.transitionOrder(
+      order._id,
+      status,
+      req.user._id,
+      note || "",
+    );
+    const notifMap = {
+      PREPARING: {
+        type: "ORDER_PREPARING",
+        title: "Order preparing",
+        roles: ["waiter", "manager"],
+      },
+      READY: {
+        type: "ORDER_READY",
+        title: "Order ready",
+        roles: ["waiter", "manager"],
+      },
+      OUT_FOR_DELIVERY: {
+        type: "DELIVERY_PICKED_UP",
+        title: "Out for delivery",
+        roles: ["manager"],
+      },
+      DELIVERED: {
+        type: "ORDER_DELIVERED",
+        title: "Delivered",
+        roles: ["manager"],
+      },
+      CANCELLED: {
+        type: "ORDER_CANCELLED",
+        title: "Order cancelled",
+        roles: ["cook", "waiter", "manager"],
+      },
+    };
+    if (notifMap[status]) {
+      const n = notifMap[status];
+      dispatchNotification({
+        restaurantId: updated.restaurant,
+        orderId: updated._id,
+        type: n.type,
+        title: `${n.title} — ${updated.orderNumber}`,
+        targetRoles: n.roles,
+      });
+    }
+    return ok(res, updated, "Updated");
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function cancelOrder(req, res, next) {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return fail(res, "Order not found", 404);
+    const isOwner = String(order.customer) === String(req.user._id);
+    const isStaff = ["manager", "admin"].includes(req.user.role);
+    if (!isOwner && !isStaff) return fail(res, "Forbidden", 403);
+    if (!["PENDING_PAYMENT", "PAID", "CONFIRMED"].includes(order.status)) {
+      return fail(res, "Cannot cancel at this stage", 400);
+    }
+    const updated = await orderService.transitionOrder(
+      order._id,
+      "CANCELLED",
+      req.user._id,
+      req.body.reason || "",
+    );
+    return ok(res, updated, "Cancelled");
+  } catch (e) {
+    next(e);
+  }
 }

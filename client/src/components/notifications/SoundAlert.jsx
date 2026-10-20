@@ -1,1 +1,21 @@
-export default function Placeholder(){return <div className="container page-container"><h1>Feature module</h1><p>This page is reserved in the project structure. Connect it to the documented API before using it in production.</p></div>}
+import { useState } from 'react';
+
+export default function SoundAlert() {
+  const [enabled, setEnabled] = useState(false);
+  if (enabled) return null;
+  return (
+    <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 flex justify-between items-center mb-4">
+      <span>Sound alerts are disabled by the browser.</span>
+      <button 
+        onClick={() => { 
+          new Audio('/sounds/waiter-alert.mp3').play()
+            .then(() => setEnabled(true))
+            .catch(console.error); 
+        }} 
+        className="btn-secondary btn-sm"
+      >
+        Enable Sounds
+      </button>
+    </div>
+  );
+}

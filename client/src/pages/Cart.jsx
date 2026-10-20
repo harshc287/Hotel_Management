@@ -1,15 +1,25 @@
+import { useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext.jsx';
+import CartItem from '../components/cart/CartItem.jsx';
+import CartSummary from '../components/cart/CartSummary.jsx';
 
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2 } from 'lucide-react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
-export default function Cart(){
- const [cart,setCart]=useState(()=>JSON.parse(localStorage.getItem('rms_cart')||'[]'));const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [type,setType]=useState('DELIVERY');const [name,setName]=useState('');const [address,setAddress]=useState('');const nav=useNavigate();const {user}=useAuth();
- const save=next=>{setCart(next);localStorage.setItem('rms_cart',JSON.stringify(next));};
- const change=(id,delta)=>save(cart.map(x=>x._id===id?{...x,quantity:Math.max(1,x.quantity+delta)}:x));
- const remove=id=>save(cart.filter(x=>x._id!==id));
- const total=cart.reduce((n,x)=>n+x.price*x.quantity,0);
- async function place(){if(!user){nav('/login');return;}setBusy(true);setError('');try{const restaurantId=cart[0]?.restaurantId; if(!restaurantId) throw new Error('Menu item has no restaurant ID. Refresh the menu after seeding the database.'); const {data}=await api.post('/orders',{restaurantId,orderType:type,customerName:name||user.name,deliveryAddress:address,items:cart.map(x=>({menuItemId:x._id,quantity:x.quantity}))});localStorage.removeItem('rms_cart');save([]);nav(`/orders/${data.order._id}`);}catch(e){setError(e.response?.data?.message||e.message||'Could not place order');}finally{setBusy(false);}}
- return <div className="container page-container"><div className="eyebrow dark">YOUR SELECTION</div><h1 className="page-title">Your bag<span>.</span></h1>{error&&<div className="alert alert-danger">{error}</div>}{!cart.length?<div className="empty-state">Your bag is empty. <Link to="/">Explore the menu</Link></div>:<div className="row g-4"><div className="col-lg-7">{cart.map(x=><div className="cart-row" key={x._id}><div className="cart-emoji">{x.isVeg?'🥗':'🍗'}</div><div className="flex-grow-1"><strong>{x.name}</strong><div className="muted">₹{x.price} each</div><div className="quantity-control"><button onClick={()=>change(x._id,-1)}><Minus size={14}/></button><span>{x.quantity}</span><button onClick={()=>change(x._id,1)}><Plus size={14}/></button><button className="remove-button" onClick={()=>remove(x._id)}><Trash2 size={14}/></button></div></div><strong>₹{(x.price*x.quantity).toFixed(2)}</strong></div>)}</div><div className="col-lg-5"><div className="checkout-card"><h3>Order details</h3><label>Order type</label><select className="form-select" value={type} onChange={e=>setType(e.target.value)}><option value="DELIVERY">Delivery</option><option value="DINE_IN">Dine-in (QR required)</option></select><label>Your name</label><input className="form-control" value={name} onChange={e=>setName(e.target.value)} placeholder={user?.name||'Name for the order'}/>{type==='DELIVERY'&&<><label>Delivery address</label><textarea className="form-control" rows="2" value={address} onChange={e=>setAddress(e.target.value)} required/></>}<div className="bill-line"><span>Subtotal</span><span>₹{total.toFixed(2)}</span></div><div className="bill-line"><span>Tax estimate</span><span>Calculated at checkout</span></div><div className="bill-total"><span>Item subtotal</span><strong>₹{total.toFixed(2)}</strong></div><button className="btn btn-gold w-100 mt-3" onClick={place} disabled={busy}>{busy?'Placing order…':'Place order'}</button><small className="muted d-block mt-2">The server recalculates menu prices. Payment is not completed by this action.</small></div></div></div>}</div>;
+export default function Cart() {
+  const nav = useNavigate();
+  const { cart, updateQty, removeItem, subtotal, clear } = useCart();
+
+  if (!cart.items.length) return <div className="card mx-auto max-w-md"><div className="card-body text-center"><h2 className="text-lg font-semibold">Your cart is empty</h2><p className="mt-1 text-sm text-slate-500">Add items from the menu.</p></div></div>;
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="card lg:col-span-2">
+        <div className="card-body">
+          <div className="flex justify-between"><h1 className="text-xl font-semibold">Your cart</h1><button className="btn-ghost btn-sm" onClick={clear}>Clear</button></div>
+          <div className="mt-4 divide-y divide-slate-100">
+            {cart.items.map((item) => <CartItem key={item.key} item={item} onChangeQty={(q) => updateQty(item.key, q)} onRemove={() => removeItem(item.key)} />)}
+          </div>
+        </div>
+      </div>
+      <div className="card h-fit"><CartSummary cart={cart} subtotal={subtotal} onCheckout={() => nav('/checkout')} /></div>
+    </div>
+  );
 }

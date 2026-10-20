@@ -1,18 +1,25 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-const SocketContext = createContext({ socket: null, latest: null });
+import { useAuth } from '../hooks/useAuth.js';
+
+const SocketContext = createContext(null);
+
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
-  const [latest, setLatest] = useState(null);
+  const { user } = useAuth();
+
   useEffect(() => {
+    if (!user) {
+      if (socket) { socket.disconnect(); setSocket(null); }
+      return;
+    }
     const token = localStorage.getItem('rms_token');
-    if (!token) return;
-    const s = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', { auth: { token }, transports: ['websocket','polling'] });
-    s.on('notification:new', setLatest);
-    setSocket(s);
-    return () => { s.disconnect(); setSocket(null); };
-  }, []);
-  return <SocketContext.Provider value={{ socket, latest }}>{children}</SocketContext.Provider>;
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', { auth: { token }, transports: ['websocket'] });
+    setSocket(newSocket);
+    return () => { newSocket.disconnect(); };
+  }, [user]);
+
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 }
-export const useSocket = () => useContext(SocketContext);
+
+export function useSocket() { return useContext(SocketContext); }

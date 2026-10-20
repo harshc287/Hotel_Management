@@ -1,17 +1,16 @@
-
 import { Router } from 'express';
-import Order from '../models/Order.js';
-import { requireAuth } from '../middleware/authMiddleware.js';
-import { allowRoles } from '../middleware/roleMiddleware.js';
-import { validate } from '../middleware/validateRequest.js';
-import { orderSchema } from '../validators/schemas.js';
-import { asyncHandler } from '../utils/apiResponse.js';
-import { placeOrder, myOrders, listOrders, getOrder, updateStatus, cancelOrder } from '../controllers/orderController.js';
+import * as ctrl from '../controllers/orderController.js';
+import { requireAuth, optionalAuth } from '../middleware/authMiddleware.js';
+import { requireRole, requireRestaurantAccess } from '../middleware/roleMiddleware.js';
+
 const router = Router();
-router.post('/', requireAuth, validate(orderSchema), asyncHandler(placeOrder));
-router.get('/mine', requireAuth, asyncHandler(myOrders));
-router.get('/', requireAuth, allowRoles('manager','admin','waiter','kitchen','delivery'), asyncHandler(listOrders));
-router.get('/:id', requireAuth, asyncHandler(getOrder));
-router.patch('/:id/status', requireAuth, allowRoles('manager','admin','kitchen','waiter','delivery'), asyncHandler(updateStatus));
-router.post('/:id/cancel', requireAuth, asyncHandler(cancelOrder));
+
+router.post('/', optionalAuth, ctrl.createOrder);
+router.get('/mine', requireAuth, ctrl.listMyOrders);
+router.get('/kitchen', requireAuth, requireRole('cook', 'manager', 'admin'), requireRestaurantAccess, ctrl.listKitchenOrders);
+router.get('/waiter', requireAuth, requireRole('waiter', 'manager', 'admin'), requireRestaurantAccess, ctrl.listWaiterOrders);
+router.get('/:id', requireAuth, ctrl.getOrder);
+router.patch('/:id/status', requireAuth, requireRole('cook', 'waiter', 'manager', 'admin', 'delivery'), ctrl.updateStatus);
+router.post('/:id/cancel', requireAuth, ctrl.cancelOrder);
+
 export default router;

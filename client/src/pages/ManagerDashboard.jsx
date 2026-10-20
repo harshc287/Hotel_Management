@@ -1,14 +1,27 @@
-
 import { useEffect, useState } from 'react';
-import { BellRing, ChefHat, ClipboardList, IndianRupee, RefreshCw } from 'lucide-react';
-import api from '../services/api';
-import { useSocket } from '../context/SocketContext';
-const statuses=['PAID','CONFIRMED','PREPARING','READY','SERVED','OUT_FOR_DELIVERY','DELIVERED','COMPLETED','CANCELLED'];
-export default function ManagerDashboard(){
- const [orders,setOrders]=useState([]);const [notes,setNotes]=useState([]);const [error,setError]=useState('');const {latest}=useSocket();
- async function load(){try{const [o,n]=await Promise.all([api.get('/orders'),api.get('/notifications')]);setOrders(o.data.orders);setNotes(n.data.notifications);}catch(e){setError(e.response?.data?.message||'Could not load manager data');}}
- useEffect(()=>{load();},[]);useEffect(()=>{if(latest){setNotes(p=>[latest,...p.filter(n=>n._id!==latest._id)]);load();}},[latest]);
- async function update(id,status){try{await api.patch(`/orders/${id}/status`,{status});await load();}catch(e){setError(e.response?.data?.message||'Status update failed');}}
- const paid=orders.filter(o=>o.paymentStatus==='PAID');const revenue=paid.reduce((s,o)=>s+o.total,0);
- return <div className="container page-container"><div className="dashboard-head"><div><div className="eyebrow dark">YOUR RESTAURANT AT A GLANCE</div><h1 className="page-title">Manager dashboard<span>.</span></h1></div><button className="btn btn-outline-dark" onClick={load}><RefreshCw size={15} className="me-1"/>Refresh</button></div>{error&&<div className="alert alert-warning">{error}</div>}<div className="row g-3 mb-4"><div className="col-6 col-lg-3"><div className="metric-card"><ClipboardList/><small>All orders</small><strong>{orders.length}</strong></div></div><div className="col-6 col-lg-3"><div className="metric-card"><ChefHat/><small>Active orders</small><strong>{orders.filter(o=>!['COMPLETED','CANCELLED'].includes(o.status)).length}</strong></div></div><div className="col-6 col-lg-3"><div className="metric-card"><IndianRupee/><small>Paid revenue</small><strong>₹{revenue.toFixed(0)}</strong></div></div><div className="col-6 col-lg-3"><div className="metric-card"><BellRing/><small>Notifications</small><strong>{notes.length}</strong></div></div></div><div className="dashboard-panel"><h3>Recent orders</h3>{!orders.length?<p className="muted">No orders yet. Place a test order from the menu.</p>:<div className="table-responsive"><table className="table align-middle"><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Payment</th><th>Status</th><th>Update</th></tr></thead><tbody>{orders.map(o=><tr key={o._id}><td><strong>{o.orderNumber}</strong><small className="d-block muted">{new Date(o.createdAt).toLocaleString()}</small></td><td>{o.customerName}</td><td>₹{o.total.toFixed(2)}</td><td>{o.paymentStatus}</td><td><span className="status-chip">{o.status.replaceAll('_',' ')}</span></td><td><select className="form-select form-select-sm" value={o.status} onChange={e=>update(o._id,e.target.value)}>{[o.status,...statuses.filter(s=>s!==o.status)].map(s=><option key={s} value={s}>{s.replaceAll('_',' ')}</option>)}</select></td></tr>)}</tbody></table></div>}</div><div className="dashboard-panel mt-4"><h3>Recent notifications</h3>{notes.slice(0,8).map(n=><div className="notification-row" key={n._id}><span className="notification-dot"></span><div><strong>{n.title}</strong><p>{n.message}</p><small className="muted">{new Date(n.createdAt).toLocaleString()}</small></div></div>)}{!notes.length&&<p className="muted">Notifications will appear here when events are recorded.</p>}</div></div>;
+import { managerService } from '../services/managerService.js';
+import Loader from '../components/common/Loader.jsx';
+
+export default function ManagerDashboard() {
+  const [data, setData] = useState(null);
+  useEffect(() => { managerService.dashboard().then(setData).catch(console.error); }, []);
+  if (!data) return <Loader />;
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Manager Dashboard</h1>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { label: 'Revenue Today', value: `₹${data.revenueToday}` },
+          { label: 'Orders Today', value: data.ordersToday },
+          { label: 'Active Orders', value: data.activeOrders },
+          { label: 'Pending Payments', value: data.pendingPayments },
+          { label: 'Active Deliveries', value: data.activeDeliveries },
+          { label: 'Cancelled Today', value: data.cancelledToday },
+        ].map((c) => (
+          <div key={c.label} className="card"><div className="card-body"><p className="text-sm text-slate-500">{c.label}</p><p className="mt-1 text-3xl font-bold">{c.value}</p></div></div>
+        ))}
+      </div>
+    </div>
+  );
 }

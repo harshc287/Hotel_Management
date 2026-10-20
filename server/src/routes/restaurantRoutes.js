@@ -1,10 +1,30 @@
-
 import { Router } from 'express';
-import Restaurant from '../models/Restaurant.js';
+import * as ctrl from '../controllers/restaurantController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
+import { requireRole, requireRestaurantAccess } from '../middleware/roleMiddleware.js';
+
 const router = Router();
-router.get('/public/:slug', async (req, res) => {
-  const restaurant = await Restaurant.findOne({ slug: req.params.slug, active: true }).select('name slug address currency taxRate');
-  if (!restaurant) return res.status(404).json({ message: 'Restaurant not found' });
-  res.json({ restaurant });
-});
+
+// Public
+router.get('/:id/public', ctrl.getPublicInfo);
+
+// Manager settings
+router.get(
+  '/settings',
+  requireAuth,
+  requireRole('manager', 'admin'),
+  requireRestaurantAccess,
+  ctrl.getSettings
+);
+router.patch(
+  '/settings',
+  requireAuth,
+  requireRole('manager', 'admin'),
+  requireRestaurantAccess,
+  ctrl.updateSettings
+);
+
+// Admin create
+router.post('/', requireAuth, requireRole('admin'), ctrl.createRestaurant);
+
 export default router;

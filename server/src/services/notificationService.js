@@ -1,10 +1,64 @@
+import crypto from 'crypto';
+import { Notification } from '../models/Notification.js';
+import { emitToRole, emitToRestaurant, emitToUser } from '../config/socket.js';
 
-import { randomUUID } from 'node:crypto';
-import Notification from '../models/Notification.js';
-import { io } from '../config/socket.js';
-export async function createNotification({ restaurantId, type, title, message, orderId = null, targetRoles = ['manager','kitchen','waiter'] }) {
-  const notification = await Notification.create({ eventId: randomUUID(), restaurantId, type, title, message, orderId, targetRoles });
-  io?.to(`restaurant:${restaurantId}`).emit('notification:new', notification);
-  for (const role of targetRoles) io?.to(`role:${role}`).emit('notification:new', notification);
-  return notification;
+const ALERT_EVENTS = new Set([
+  'NEW_ORDER',
+  'PAYMENT_SUCCESS',
+  'PAYMENT_FAILED',
+  'ORDER_ACCEPTED',
+  'ORDER_PREPARING',
+  'ORDER_READY',
+  'WAITER_CALL',
+  'BILL_REQUEST',
+  'DELIVERY_ASSIGNED',
+  'DELIVERY_PICKED_UP',
+  'DELIVERY_NEARBY',
+  'ORDER_DELIVERED',
+  'ORDER_CANCELLED',
+  'REFUND_UPDATED',
+]);
+
+export async function dispatchNotification({
+  restaurantId,
+  orderId = null,
+  type,
+  title,
+  message = '',
+  payload = {},
+  targetRoles = [],
+  targetUser = null,
+}) {
+  const eventId = crypto.randomUUID();
+  const notif = await Notification.create({
+    restaurant: restaurantId,
+    order: orderId,
+    type,
+    eventId,
+    title,
+    message,
+    payload,
+    targetRoles,
+    targetUser,
+  });
+
+  const outgoing = {
+    id: String(notif._id),
+    eventId,
+    type,
+    title,
+    message,
+    payload,
+    orderId,
+    at: notif.createdAt,
+    alarm: ALERT_EVENTS.has(type),
+  };
+
+  if (targetUser) emitToUser(String(targetUser), 'notification', outgoing);
+  if (targetRoles.length) {
+    targetRoles.forEach((r) => emitToRole(r, 'notification', outgoing));
+  }
+  if (restaurantId) emitToRestaurant(String(restaurantId), 'notification', outgoing);
+
+  return notif;
 }

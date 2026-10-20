@@ -1,1 +1,3 @@
-export default function Placeholder(){return <div className="container page-container"><h1>Feature module</h1><p>This page is reserved in the project structure. Connect it to the documented API before using it in production.</p></div>}
+export default function RestaurantSettings() {
+  return <div className="card"><div className="card-body"><h1 className="text-2xl font-bold mb-4">Settings</h1><p className="text-slate-500">Settings functionality coming soon.</p></div></div>;
+}
