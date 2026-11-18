@@ -1,6 +1,3 @@
-// Validates and normalizes environment variables at startup.
-// Required in every environment; optional ones get defaults.
-
 const REQUIRED = [
   'MONGODB_URI',
   'CLIENT_URL',

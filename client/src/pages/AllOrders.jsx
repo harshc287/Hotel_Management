@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { managerService } from '../../services/managerService.js';
-import Loader from '../../components/common/Loader.jsx';
+import { managerService } from '../services/managerService.js';
+import Loader from '../../src/components/common/Loader.jsx';
 export default function AllOrders() {
   const [data, setData] = useState(null);
   useEffect(() => { managerService.allOrders().then(setData); }, []);

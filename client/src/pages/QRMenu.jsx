@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { menuService } from '../services/menuService.js';
+import { menuService } from '../services/menuSService.js';
 import { useCart } from '../context/CartContext.jsx';
 import MenuCategory from '../components/menu/MenuCategory.jsx';
 import Loader from '../components/common/Loader.jsx';

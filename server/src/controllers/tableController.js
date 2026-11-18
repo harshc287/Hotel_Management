@@ -22,19 +22,45 @@ export async function listTables(req, res, next) {
   }
 }
 
+
 export async function updateTable(req, res, next) {
   try {
-    const t = await Table.findOneAndUpdate(
-      { _id: req.params.id, restaurant: req.restaurantId },
-      req.body,
-      { new: true }
+    const allowedFields = ['number', 'isActive'];
+
+    const patch = {};
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        patch[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return fail(res, 'No valid fields provided', 400);
+    }
+
+    const table = await Table.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        restaurant: req.restaurantId,
+      },
+      { $set: patch },
+      {
+        new: true,
+        runValidators: true,
+      }
     );
-    if (!t) return fail(res, 'Table not found', 404);
-    return ok(res, t);
+
+    if (!table) {
+      return fail(res, 'Table not found', 404);
+    }
+
+    return ok(res, table, 'Table updated');
   } catch (e) {
     next(e);
   }
 }
+
 
 export async function getTableQr(req, res, next) {
   try {

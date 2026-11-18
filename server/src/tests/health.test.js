@@ -1,12 +1,19 @@
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import request from 'supertest';
-import { createApp } from '../src/app.js';
+
+import { createApp } from '../app.js';
 
 describe('GET /api/health', () => {
-  it('returns ok', async () => {
+  it('should return successful health response', async () => {
     const app = createApp();
-    const res = await request(app).get('/api/health');
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.status).toBe('ok');
+
+    const response = await request(app)
+      .get('/api/health');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.success, true);
+    assert.equal(response.body.status, 'ok');
   });
-});  
+});

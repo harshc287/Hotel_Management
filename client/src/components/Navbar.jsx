@@ -1,8 +1,8 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth.js';
-import { useCart } from '../../context/CartContext.jsx';
-import NotificationBell from '../notifications/NotificationBell.jsx';
+import { useAuth } from '../hooks/useAuth.js';
+import { useCart } from '../context/CartContext.jsx';
+import NotificationBell from '../components/notifications/NotificationList.jsx';
 
 const STAFF_LINKS = {
   waiter: [{ to: '/waiter', label: 'Waiter' }],

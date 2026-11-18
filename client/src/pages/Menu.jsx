@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { menuService } from '../../services/menuService.js';
-import { useCart } from '../../context/CartContext.jsx';
-import MenuCategory from '../../components/menu/MenuCategory.jsx';
-import Loader from '../../components/common/Loader.jsx';
+import { menuService } from '../services/menuSService.js';
+import { useCart } from '../context/CartContext.jsx';
+import MenuCategory from '../components/menu/MenuCategory.jsx';
+import Loader from '../components/common/Loader.jsx';
 import { useNavigate } from 'react-router-dom';
 
 export default function Menu() {

@@ -6,7 +6,7 @@ const paymentSchema = new mongoose.Schema(
     restaurant: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true, index: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     provider: { type: String, default: 'razorpay' },
-    razorpayOrderId: { type: String, index: true, default: null },
+    razorpayOrderId: { type: String,  default: null },
     razorpayPaymentId: { type: String, index: true, default: null },
     razorpaySignature: { type: String, default: null },
     amount: { type: Number, required: true, min: 0 },

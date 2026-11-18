@@ -1,41 +1,117 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.js';
 
-const FALLBACK = { waiter: '/waiter', cook: '/kitchen', delivery: '/delivery', manager: '/manager', admin: '/manager', customer: '/' };
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import './css/coustom.css';
 
 export default function Login() {
-  const { login } = useAuth();
-  const nav = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const onSubmit = async (e) => {
-    e.preventDefault(); setBusy(true); setError('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  async function submit(e) {
+    e.preventDefault();
+    setError('');
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+
+    setBusy(true);
+
     try {
-      const user = await login(email.trim(), password);
-      nav(location.state?.from || FALLBACK[user.role] || '/', { replace: true });
-    } catch (err) { setError(err.message); } finally { setBusy(false); }
-  };
+      const user = await login(cleanEmail, password);
+
+      if (user.role === 'manager') {
+        navigate('/manager', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        'Login failed. Please check your email and password.'
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-md">
-      <div className="card">
-        <div className="card-body">
-          <h1 className="text-xl font-semibold">Sign in</h1>
-          {error && <div className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</div>}
-          <form className="mt-5 space-y-4" onSubmit={onSubmit}>
-            <div><label className="label">Email</label><input type="email" className="input" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><label className="label">Password</label><input type="password" className="input" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-            <button className="btn-primary w-full" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          </form>
-          <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Dev: <code>manager@demo.local</code> / <code>Password123!</code></div>
-          <p className="mt-4 text-center text-sm text-slate-600">No account? <Link to="/register" className="text-brand-600 hover:underline">Register</Link></p>
+    <div className="auth-wrap">
+      <form className="auth-card" onSubmit={submit}>
+
+        <div className="eyebrow">
+          TABLE &amp; THYME
         </div>
-      </div>
+
+        <h1>Welcome back.</h1>
+
+        <p>
+          Sign in to continue to your account
+          and enjoy a better dining experience.
+        </p>
+
+        {error && (
+          <div className="alert alert-danger" role="alert">
+            {error}
+          </div>
+        )}
+
+        <label htmlFor="login-email">
+          Email address
+        </label>
+
+        <input
+          id="login-email"
+          className="form-control"
+          type="email"
+          name="email"
+          placeholder="Enter your email address"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+        />
+
+        <label htmlFor="login-password">
+          Password
+        </label>
+
+        <input
+          id="login-password"
+          className="form-control"
+          type="password"
+          name="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+
+        <button
+          type="submit"
+          className="btn btn-gold w-100"
+          disabled={busy}
+        >
+          {busy ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <div className="auth-foot">
+          Don't have an account?
+          <Link to="/register"> Create account</Link>
+        </div>
+
+      </form>
     </div>
   );
 }

@@ -2,6 +2,9 @@ import 'dotenv/config';
 import http from 'http';
 import { Server } from 'socket.io';
 
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
+
 import { validateEnv } from './config/env.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { createApp } from './app.js';
@@ -87,7 +90,12 @@ async function start() {
   }
 }
 
-start();
+const isMainModule =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
-// Export for tests (supertest against app without listening)
-export { httpServer, io };
+if (isMainModule) {
+  start();
+}
+
+export { start, httpServer, io };
