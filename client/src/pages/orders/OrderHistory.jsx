@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { orderService } from '../services/orderService.js';
-import Loader from '../components/common/Loader.jsx';
+import { orderService } from '../../services/orderService.js';
+import Loader from '../../components/common/Loader.jsx';
 
 export default function OrderHistory() {
   const [orders, setOrders] = useState([]);

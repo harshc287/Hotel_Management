@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext.jsx';
-import { useAuth } from '../hooks/useAuth.js';
-import { orderService } from '../services/orderService.js';
-import { paymentService } from '../services/paymentService.js';
+import { useCart } from '../../context/CartContext.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
+import { orderService } from '../../services/orderService.js';
+import { paymentService } from '../../services/paymentService.js';
 
 export default function Checkout() {
   const { cart, clear } = useCart();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { managerService } from '../services/managerService.js';
-import Loader from '../components/common/Loader.jsx';
+import { managerService } from '../../services/managerService.js';
+import Loader from '../../components/common/Loader.jsx';
 export default function SalesReports() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);

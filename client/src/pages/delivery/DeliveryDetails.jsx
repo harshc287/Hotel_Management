@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { deliveryService } from '../services/deliveryService.js';
-import { locationService } from '../services/locationService.js';
+import { deliveryService } from '../../services/deliveryService.js';
+import { locationService } from '../../services/locationService.js';
 
 export default function DeliveryDetails() {
   const { id } = useParams();

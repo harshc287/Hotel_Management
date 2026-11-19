@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import './css/coustom.css';
+import { useAuth } from '../../hooks/useAuth';
+import './styles/custom.css';
 
 export default function Register() {
   const [form, setForm] = useState({

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { menuService } from '../services/menuSService.js';
-import { useCart } from '../context/CartContext.jsx';
-import MenuCategory from '../components/menu/MenuCategory.jsx';
-import Loader from '../components/common/Loader.jsx';
+import { menuService } from '../../services/menuSService.js';
+import { useCart } from '../../context/CartContext.jsx';
+import MenuCategory from '../../components/menu/MenuCategory.jsx';
+import Loader from '../../components/common/Loader.jsx';
 
 export default function QRMenu() {
   const { token } = useParams();

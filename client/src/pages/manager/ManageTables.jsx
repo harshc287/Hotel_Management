@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 export default function ManageTables() {
   const [tables, setTables] = useState([]);
   useEffect(() => { api.get('/tables').then((r) => setTables(r.data.data)); }, []);

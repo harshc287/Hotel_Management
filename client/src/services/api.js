@@ -10,8 +10,15 @@ export const api = axios.create({
   timeout: 15000,
 });
 
+// Attach JWT only when authentication is required.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('rms_token');
+
+  if (config.skipAuth) {
+    delete config.headers.Authorization;
+    delete config.skipAuth;
+    return config;
+  }
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -20,6 +27,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Handle API errors consistently.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

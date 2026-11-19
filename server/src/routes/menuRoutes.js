@@ -1,12 +1,38 @@
+
 import { Router } from 'express';
 import * as ctrl from '../controllers/menuController.js';
+
 import { requireAuth } from '../middleware/authMiddleware.js';
-import { requireRole, requireRestaurantAccess } from '../middleware/roleMiddleware.js';
+import {
+  requireRole,
+  requireRestaurantAccess,
+} from '../middleware/roleMiddleware.js';
+
 import { validateBody } from '../middleware/validateRequest.js';
-import { categorySchema, menuItemSchema, updateItemSchema } from '../validators/menuValidator.js';
+
+import {
+  categorySchema,
+  menuItemSchema,
+  updateItemSchema,
+} from '../validators/menuValidator.js';
 
 const router = Router();
-router.use(requireAuth, requireRole('manager', 'admin'), requireRestaurantAccess);
+
+// ======================================
+// PUBLIC ROUTES - NO LOGIN REQUIRED
+// ======================================
+
+router.get('/public', ctrl.publicMenu);
+
+// ======================================
+// PROTECTED STAFF ROUTES
+// ======================================
+
+router.use(
+  requireAuth,
+  requireRole('manager', 'admin'),
+  requireRestaurantAccess
+);
 
 router.get('/', ctrl.listMenu);
 router.post('/', validateBody(menuItemSchema), ctrl.createItem);
@@ -15,7 +41,11 @@ router.delete('/:id', ctrl.deleteItem);
 
 router.get('/categories', ctrl.listCategories);
 router.post('/categories', validateBody(categorySchema), ctrl.createCategory);
-router.patch('/categories/:id', validateBody(categorySchema.partial()), ctrl.updateCategory);
+router.patch(
+  '/categories/:id',
+  validateBody(categorySchema.partial()),
+  ctrl.updateCategory
+);
 router.delete('/categories/:id', ctrl.deleteCategory);
 
 export default router;

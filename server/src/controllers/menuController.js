@@ -2,6 +2,8 @@ import { MenuCategory } from '../models/MenuCategory.js';
 import { MenuItem } from '../models/MenuItem.js';
 import { ok, fail } from '../utils/apiResponse.js';
 import { AuditLog } from '../models/AuditLog.js';
+import mongoose from 'mongoose';
+import { Restaurant } from '../models/Restaurant.js';
 
 // ---- Categories ----
 export async function listCategories(req, res, next) {
@@ -113,5 +115,57 @@ export async function deleteItem(req, res, next) {
     return ok(res, null, 'Removed');
   } catch (e) {
     next(e);
+  }
+}
+
+
+// ---- Public Menu ----
+export async function publicMenu(req, res, next) {
+  try {
+    const { restaurantId } = req.query;
+
+    // Validate restaurant ID
+    if (!restaurantId || !mongoose.isValidObjectId(restaurantId)) {
+      return fail(res, 'A valid restaurant ID is required.', 400);
+    }
+
+    // Verify restaurant exists and is active
+    const restaurant = await Restaurant.findOne({
+      _id: restaurantId,
+      isActive: true,
+    }).select('_id name address phone currency');
+
+    if (!restaurant) {
+      return fail(res, 'Restaurant not found or inactive.', 404);
+    }
+
+    // Get active categories
+    const categories = await MenuCategory.find({
+      restaurant: restaurant._id,
+      isActive: true,
+    })
+      .sort({ sortOrder: 1, name: 1 })
+      .lean();
+
+    // Get available menu items
+    const items = await MenuItem.find({
+      restaurant: restaurant._id,
+      isAvailable: true,
+      category: { $in: categories.map((category) => category._id) },
+    })
+      .sort({ name: 1 })
+      .lean();
+
+    return ok(
+      res,
+      {
+        restaurant,
+        categories,
+        items,
+      },
+      'Public menu fetched successfully.'
+    );
+  } catch (error) {
+    next(error);
   }
 }

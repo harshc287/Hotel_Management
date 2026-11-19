@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { orderService } from '../services/orderService.js';
-import Loader from '../../src/components/common/Loader.jsx';
+import { orderService } from '../../services/orderService.js';
+import Loader from '../../components/common/Loader.jsx';
 
 export default function TrackOrder() {
   const { id } = useParams();

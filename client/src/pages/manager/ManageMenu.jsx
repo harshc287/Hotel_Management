@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '../services/api.js';
+import { api } from '../../services/api.js';
 export default function ManageMenu() {
   const [categories, setCategories] = useState([]);
   const [items, setItems] = useState([]);

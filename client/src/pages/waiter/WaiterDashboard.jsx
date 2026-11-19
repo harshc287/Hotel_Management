@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { orderService } from '../services/orderService.js';
-import { useSocket } from '../context/SocketContext.jsx';
-import { useAuth } from '../hooks/useAuth.js';
-import SoundAlert from '../components/notifications/SoundAlert.jsx';
-import Loader from '../components/common/Loader.jsx';
+import { orderService } from '../../services/orderService.js';
+import { useSocket } from '../../context/SocketContext.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
+import SoundAlert from '../../components/notifications/SoundAlert.jsx';
+import Loader from '../../components/common/Loader.jsx';
 
 export default function WaiterDashboard() {
   const { user } = useAuth();

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { deliveryService } from '../services/deliveryService.js';
-import Loader from '../components/common/Loader.jsx';
+import { deliveryService } from '../../services/deliveryService.js';
+import Loader from '../../components/common/Loader.jsx';
 
 export default function DeliveryDashboard() {
   const [assignments, setAssignments] = useState([]);
